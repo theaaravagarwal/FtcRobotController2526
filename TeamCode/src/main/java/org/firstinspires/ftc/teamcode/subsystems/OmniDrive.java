@@ -4,8 +4,8 @@ import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 
 /**
- * OmniDrive subsystem (not an OpMode).
- * -call init(hardwareMap) from your OpMode init()
+ * OmniDrive subsystem
+ * -call init(hardwareMap) from the OpMode init()
  * -call setDrive(strafe, forward, rotation) every loop to drive
  */
 public class OmniDrive {
