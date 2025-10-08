@@ -27,8 +27,8 @@ public class FieldCentric {
         rightBack = hw.get(DcMotor.class, rightBackName);
         //set directions to match your wiring/gearing
         leftFront.setDirection(DcMotor.Direction.FORWARD);
-        leftBack.setDirection(DcMotor.Direction.FORWARD);
-        rightFront.setDirection(DcMotor.Direction.REVERSE);
+        rightFront.setDirection(DcMotor.Direction.FORWARD);
+        leftBack.setDirection(DcMotor.Direction.REVERSE);
         rightBack.setDirection(DcMotor.Direction.REVERSE);
         //dont use encoders
         leftFront.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
@@ -54,9 +54,9 @@ public class FieldCentric {
         double max = Math.max(Math.abs(lfPow), Math.max(Math.abs(lbPow), Math.max(Math.abs(rfPow), Math.abs(rbPow)))); //limit values to 1.0
         if (max>1.0) {lfPow/=max; lbPow/=max; rfPow/=max; rbPow/=max;}
         //apply the powers
-        leftFront.setPower(lfPow); 
+        leftFront.setPower(lfPow);
+        rightFront.setPower(rfPow);
         leftBack.setPower(lbPow);
-        rightFront.setPower(rfPow); 
         rightBack.setPower(rbPow);
         lastFL = lfPow;
         lastFR = rfPow;
