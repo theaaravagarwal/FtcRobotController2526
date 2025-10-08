@@ -17,30 +17,31 @@ public class OmniShooterTeleop extends OpMode {
     @Override
     public void init() {
         //init drive
-        drive = new RobotCentric();
+        //drive = new RobotCentric();
+        drive = new FieldCentric();
         drive.init(hardwareMap);
 
         //init shooter
-        shooter = new ShooterSubsystem(`hardwareMap, "flywheel", "feederServo");
-        shooter.setFeederPositions(0.0, 1.0); //tune later for feeder we will have (maybe)
+        //shooter = new ShooterSubsystem(`hardwareMap, "flywheel", "feederServo");
+        //shooter.setFeederPositions(0.0, 1.0); //tune later for feeder we will have (maybe)
 
         //init limelight
-        limelight = new LimelightAprilTag("http://limelight.local:5801", TARGET_TAG_ID); //FIXME: placeholder limelight address
+        //limelight = new LimelightAprilTag("http://limelight.local:5801", TARGET_TAG_ID); //FIXME: placeholder limelight address
     }
 
     @Override
     public void loop() {
         //drive controls
         double strafe = -gamepad1.left_stick_x;
-        double forward = -gamepad1.left_stick_y;
+        double forward = gamepad1.left_stick_y;
         double rotate = -gamepad1.right_stick_x;
-        drive.setDrive(strafe, forward, rotate);
+        drive.setDrive(strafe, forward, rotate, 0.0);
 
         //get dist from cam
-        double[] tagPose = limelight.getTargetPose();
-        double distance = limelight.getDistanceMeters();
+        //double[] tagPose = limelight.getTargetPose();
+        //double distance = limelight.getDistanceMeters();
         //compute required ball spd, rpm if we see tag
-        double targetRPM = 0.0;
+        //double targetRPM = 0.0;
         if (distance>0) {
             double v0 = shooter.computeRequiredBallVelocity(distance, GOAL_HEIGHT_METERS);
             targetRPM = shooter.ballSpeedToTargetRPM(v0);
