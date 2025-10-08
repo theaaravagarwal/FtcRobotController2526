@@ -42,17 +42,17 @@ public class OmniShooterTeleop extends OpMode {
         //double distance = limelight.getDistanceMeters();
         //compute required ball spd, rpm if we see tag
         //double targetRPM = 0.0;
-        if (distance>0) {
-            double v0 = shooter.computeRequiredBallVelocity(distance, GOAL_HEIGHT_METERS);
-            targetRPM = shooter.ballSpeedToTargetRPM(v0);
-            shooter.setTargetRPM(targetRPM);
-        } else shooter.setTargetRPM(0.0);
+        //if (distance>0) {
+        //    double v0 = shooter.computeRequiredBallVelocity(distance, GOAL_HEIGHT_METERS);
+        //    targetRPM = shooter.ballSpeedToTargetRPM(v0);
+        //    shooter.setTargetRPM(targetRPM);
+        //} else shooter.setTargetRPM(0.0);
 
         //update shooter controller and feeder
-        shooter.update();
+        //shooter.update();
 
         //fire when gamepad2.a is pressed
-        if (gamepad2.a&&shooter.isAtTargetRPM()) shooter.requestFeed();
+        //if (gamepad2.a&&shooter.isAtTargetRPM()) shooter.requestFeed();
 
         //get data for debugging
         telemetry.addData("Tag Pose", tagPose != null ? String.format("[%.2f, %.2f, %.2f]", tagPose[0], tagPose[1], tagPose[2]) : "Not seen");
