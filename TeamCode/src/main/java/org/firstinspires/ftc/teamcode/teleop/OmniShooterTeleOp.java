@@ -6,7 +6,7 @@ import com.qualcomm.robotcore.hardware.Gamepad;
 
 @TeleOp(name = "OmniShooterTeleop")
 public class OmniShooterTeleop extends OpMode {
-    private OmniDrive drive;
+    private RobotCentric drive;
     private ShooterSubsystem shooter;
     private LimelightAprilTag limelight;
     
@@ -17,15 +17,15 @@ public class OmniShooterTeleop extends OpMode {
     @Override
     public void init() {
         //init drive
-        drive = new OmniDrive();
+        drive = new RobotCentric();
         drive.init(hardwareMap);
 
         //init shooter
-        shooter = new ShooterSubsystem(hardwareMap, "flywheel", "feederServo");
+        shooter = new ShooterSubsystem(`hardwareMap, "flywheel", "feederServo");
         shooter.setFeederPositions(0.0, 1.0); //tune later for feeder we will have (maybe)
 
         //init limelight
-        limelight = new LimelightAprilTag("http://limelight.local", TARGET_TAG_ID); //FIXME: placeholder limelight address
+        limelight = new LimelightAprilTag("http://limelight.local:5801", TARGET_TAG_ID); //FIXME: placeholder limelight address
     }
 
     @Override

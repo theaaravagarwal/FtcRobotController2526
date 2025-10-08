@@ -19,7 +19,7 @@ public class LimelightAprilTag {
         this.limelightHost = limelightHost;
         this.targetTagId = targetTagId;
     }
-    //this just gets the translation vector (t) from the limelight JSON data
+    //this just gets the translation vector (t) from the limelight json data
     public double[] getTargetPose() {
         try {
             URL url = new URL(limelightHost+"/json"); //fetch by https
