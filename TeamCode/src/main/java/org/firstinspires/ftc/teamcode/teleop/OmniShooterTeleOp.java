@@ -2,88 +2,94 @@ package org.firstinspires.ftc.teamcode;
 
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
-import com.qualcomm.robotcore.hardware.Gamepad;
-
-import main.java.org.firstinspires.ftc.teamcode.subsystems.FieldCentric;
-import main.java.org.firstinspires.ftc.teamcode.subsystems.ShooterSubsystem;
-
 import com.qualcomm.robotcore.hardware.IMU;
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
+import org.firstinspires.ftc.teamcode.subsystems.*;
+import com.qualcomm.robotcore.hardware.Gamepad;
 
 @TeleOp(name = "OmniShooterTeleop")
-public class OmniShooterTeleop extends OpMode { //chanbges
-    private RobotCentric drive;
+public class OmniShooterTeleop extends OpMode {
+
+    // Subsystems
+    private FieldCentric drive;
     private ShooterSubsystem shooter;
     private LimelightAprilTag limelight;
-    
-    //shooter constants
-    private final double GOAL_HEIGHT_METERS = 0.9845; //goal height (meters)
-    private final int TARGET_TAG_ID = 20; //april tag id for the goal (20 for blue, 24 for red)
-    private double hdoffset = 0; //heading offset for field centric drive
+    private IMU imu; // <-- missing declaration before
+
+    // Shooter constants
+    private static final double GOAL_HEIGHT_METERS = 0.9845; // goal height (meters)
+    private static final int TARGET_TAG_ID = 20; // april tag id for the goal (20 for blue, 24 for red)
+    private double hdoffset = 0; // heading offset for field centric drive
 
     @Override
     public void init() {
-        //init imu for
+        // Initialize IMU
         imu = hardwareMap.get(IMU.class, "imu");
         IMU.Parameters params = new IMU.Parameters(
-            new com.qualcomm.hardware.rev.RevHubOrientationOnRobot(
-                com.qualcomm.hardware.rev.RevHubOrientationOnRobot.LogoFacingDirection.UP,
-                com.qualcomm.hardware.rev.RevHubOrientationOnRobot.UsbFacingDirection.FORWARD
-            )
+                new com.qualcomm.hardware.rev.RevHubOrientationOnRobot(
+                        com.qualcomm.hardware.rev.RevHubOrientationOnRobot.LogoFacingDirection.UP,
+                        com.qualcomm.hardware.rev.RevHubOrientationOnRobot.UsbFacingDirection.FORWARD
+                )
         );
         imu.initialize(params);
 
-        //init drive
-        //drive = new RobotCentric();
+        // Initialize drive system
         drive = new FieldCentric();
         drive.init(hardwareMap);
 
-        //init shooter
-        //shooter = new ShooterSubsystem(`hardwareMap, "flywheel", "feederServo");
-        //shooter.setFeederPositions(0.0, 1.0); //tune later for feeder we will have (maybe)
+        // Initialize shooter (uncomment once you have your shooter subsystem set up)
+        // shooter = new ShooterSubsystem(hardwareMap, "flywheel", "feederServo");
+        // shooter.setFeederPositions(0.0, 1.0);
 
-        //init limelight
-        //limelight = new LimelightAprilTag("http://limelight.local:5801", TARGET_TAG_ID); //FIXME: placeholder limelight address
+        // Initialize limelight (uncomment once ready)
+        // limelight = new LimelightAprilTag("http://limelight.local:5801", TARGET_TAG_ID);
     }
 
     @Override
     public void loop() {
-        //drive controls
+        // Get drive control inputs
         double strafe = -gamepad1.left_stick_x;
         double forward = gamepad1.left_stick_y;
         double rotate = -gamepad1.right_stick_x;
 
-        //reset heading offset
-        if (gamepad1.y) hdoffset = imu.getRobotYawPitchRollAngles().getYaw(AngleUnit.RADIANS);
+        // Reset heading offset when Y is pressed
+        if (gamepad1.y) {
+            hdoffset = imu.getRobotYawPitchRollAngles().getYaw(AngleUnit.RADIANS);
+        }
 
+        // Compute heading relative to offset
         double rawhd = imu.getRobotYawPitchRollAngles().getYaw(AngleUnit.RADIANS);
-        double hdrad = rawhd-hdoffset;
+        double hdrad = rawhd - hdoffset;
 
+        // Drive the robot
         drive.setDrive(strafe, forward, rotate, hdrad);
 
-        //get dist from cam
-        //double[] tagPose = limelight.getTargetPose();
-        //double distance = limelight.getDistanceMeters();
-        //compute required ball spd, rpm if we see tag
-        //double targetRPM = 0.0;
-        //if (distance>0) {
-        //    double v0 = shooter.computeRequiredBallVelocity(distance, GOAL_HEIGHT_METERS);
-        //    targetRPM = shooter.ballSpeedToTargetRPM(v0);
-        //    shooter.setTargetRPM(targetRPM);
-        //} else shooter.setTargetRPM(0.0);
+        // Shooter logic (uncomment when ready)
+        /*
+        double[] tagPose = limelight.getTargetPose();
+        double distance = limelight.getDistanceMeters();
+        double targetRPM = 0.0;
 
-        //update shooter controller and feeder
-        //shooter.update();
+        if (distance > 0) {
+            double v0 = shooter.computeRequiredBallVelocity(distance, GOAL_HEIGHT_METERS);
+            targetRPM = shooter.ballSpeedToTargetRPM(v0);
+            shooter.setTargetRPM(targetRPM);
+        } else {
+            shooter.setTargetRPM(0.0);
+        }
 
-        //fire when gamepad2.a is pressed
-        //if (gamepad2.a&&shooter.isAtTargetRPM()) shooter.requestFeed();
+        shooter.update();
 
-        //get data for debugging
-        // telemetry.addData("Tag Pose", tagPose != null ? String.format("[%.2f, %.2f, %.2f]", tagPose[0], tagPose[1], tagPose[2]) : "Not seen");
-        // telemetry.addData("Distance (m)", distance);
-        // telemetry.addData("Target RPM", targetRPM);
-        // telemetry.addData("Flywheel RPM", shooter.getFlywheelRPM());
-        // telemetry.addData("At Target RPM", shooter.isAtTargetRPM());
-        // telemetry.update();
+        if (gamepad2.a && shooter.isAtTargetRPM()) {
+            shooter.requestFeed();
+        }
+
+        telemetry.addData("Tag Pose", tagPose != null ? String.format("[%.2f, %.2f, %.2f]", tagPose[0], tagPose[1], tagPose[2]) : "Not seen");
+        telemetry.addData("Distance (m)", distance);
+        telemetry.addData("Target RPM", targetRPM);
+        telemetry.addData("Flywheel RPM", shooter.getFlywheelRPM());
+        telemetry.addData("At Target RPM", shooter.isAtTargetRPM());
+        telemetry.update();
+        */
     }
 }
