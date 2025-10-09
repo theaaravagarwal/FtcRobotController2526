@@ -14,7 +14,7 @@ public class OmniShooterTeleop extends OpMode {
     private FieldCentric drive;
     private ShooterSubsystem shooter;
     private LimelightAprilTag limelight;
-    private IMU imu; // <-- missing declaration before
+    private IMU imu;
 
     // Shooter constants
     private static final double GOAL_HEIGHT_METERS = 0.9845; // goal height (meters)
