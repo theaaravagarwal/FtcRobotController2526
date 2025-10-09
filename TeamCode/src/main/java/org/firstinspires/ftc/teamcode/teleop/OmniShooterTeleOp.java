@@ -7,8 +7,8 @@ import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.teamcode.subsystems.*;
 import com.qualcomm.robotcore.hardware.Gamepad;
 
-@TeleOp(name = "OmniShooterTeleop")
-public class OmniShooterTeleop extends OpMode {
+@TeleOp(name = "OmniShooterTeleOp")
+public class OmniShooterTeleOp extends OpMode {
 
     // Subsystems
     private FieldCentric drive;
