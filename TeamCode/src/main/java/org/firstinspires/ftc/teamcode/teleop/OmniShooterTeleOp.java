@@ -48,9 +48,9 @@ public class OmniShooterTeleOp extends OpMode {
     @Override
     public void loop() {
         // Get drive control inputs
-        double strafe = -gamepad1.left_stick_x;
-        double forward = gamepad1.left_stick_y;
-        double rotate = -gamepad1.right_stick_x;
+        double strafe = -gamepad1.left_stick_x; //right is +
+        double forward = gamepad1.left_stick_y; //up is +
+        double rotate = -gamepad1.right_stick_x; //ccw is +
 
         // Reset heading offset when Y is pressed
         if (gamepad1.y) {

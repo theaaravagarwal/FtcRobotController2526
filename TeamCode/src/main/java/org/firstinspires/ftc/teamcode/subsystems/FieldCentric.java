@@ -27,8 +27,8 @@ public class FieldCentric {
         rightBack = hw.get(DcMotor.class, rightBackName);
         //set directions to match your wiring/gearing
         leftFront.setDirection(DcMotor.Direction.FORWARD);
-        rightFront.setDirection(DcMotor.Direction.FORWARD);
-        leftBack.setDirection(DcMotor.Direction.REVERSE);
+        leftBack.setDirection(DcMotor.Direction.FORWARD);
+        rightFront.setDirection(DcMotor.Direction.REVERSE);
         rightBack.setDirection(DcMotor.Direction.REVERSE);
         //dont use encoders
         leftFront.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
@@ -43,25 +43,28 @@ public class FieldCentric {
     }
     //drive by: x = strafe (left +, right -), y = forward (forward +, back -), rx = rotation (ccw+)
     public void setDrive(double x, double y, double rx, double hdRad) {
-        //rot the stick in by the - of the robot dir
         double c = Math.cos(hdRad);
         double s = Math.sin(hdRad);
-        double fldX = x*c-y*s;  //rot strafe
-        double fldY = x*s+y*c;  //rot forward
-        //use the rotated inputs for power
-        double lfPow  = fldY+fldX+rx; double lbPow   = fldY-fldX+rx; //left
-        double rfPow = fldY-fldX-rx; double rbPow  = fldY+fldX-rx; //right
-        double max = Math.max(Math.abs(lfPow), Math.max(Math.abs(lbPow), Math.max(Math.abs(rfPow), Math.abs(rbPow)))); //limit values to 1.0
-        if (max>1.0) {lfPow/=max; lbPow/=max; rfPow/=max; rbPow/=max;}
-        //apply the powers
-        leftFront.setPower(lfPow);
-        rightFront.setPower(rfPow);
-        leftBack.setPower(lbPow);
-        rightBack.setPower(rbPow);
-        lastFL = lfPow;
-        lastFR = rfPow;
-        lastBL = lbPow;
-        lastBR = rbPow;
+        
+        double rtx = x*c-y*s;
+        double rty = x*s+y*c;
+
+        double lfPow = rty+rtx+rx;
+        double rfPow = rty-rtx-rx;
+        double lbPow = rty-rtx+rx;
+        double rbPow = rty+rtx-rx;
+
+        double max = Math.max(1.0, Math.max(Math.abs(lfPow), Math.max(Math.abs(rfPow), Math.max(Math.abs(lbPow), Math.abs(rbPow)))));
+
+        lfPow/=max;
+        rfPow/=max;
+        lbPow/=max;
+        rbPow/=max;
+
+        leftFront.setPower(lfPow); lastFL = lfPow;
+        rightFront.setPower(rfPow); lastFR = rfPow;
+        leftBack.setPower(lbPow); lastFR = rfPow;
+        rightBack.setPower(rbPow); lastBR = rbPow;
     }
     //getters for data
     public double getLastFL() {return lastFL;}
