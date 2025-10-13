@@ -46,8 +46,8 @@ public class FieldCentric {
         double c = Math.cos(hdRad);
         double s = Math.sin(hdRad);
         
-        double rtx = x*c-y*s;
-        double rty = x*s+y*c;
+        double rtx = x*c+y*s; //rotated x
+        double rty = -x*s+y*c; //rotated y
 
         double lfPow = rty+rtx+rx;
         double rfPow = rty-rtx-rx;
@@ -63,7 +63,7 @@ public class FieldCentric {
 
         leftFront.setPower(lfPow); lastFL = lfPow;
         rightFront.setPower(rfPow); lastFR = rfPow;
-        leftBack.setPower(lbPow); lastFR = rfPow;
+        leftBack.setPower(lbPow); lastBL = rfPow;
         rightBack.setPower(rbPow); lastBR = rbPow;
     }
     //getters for data
