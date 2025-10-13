@@ -75,15 +75,9 @@ public class FieldCentric {
         double cos = Math.cos(headingRad);
         double sin = Math.sin(headingRad);
 
-        // Rotate the field vector by -heading to obtain robot-centric motion commands.
-        // The intermediate strafe axis here is still defined as +X being to the right.
-        double robotStrafeRight = fieldStrafe * cos + fieldForward * sin;
+        // Rotate the field vector by -heading to obtain robot-centric motion commands
+        double robotStrafe = fieldStrafe * cos + fieldForward * sin;
         double robotForward = -fieldStrafe * sin + fieldForward * cos;
-
-        // RobotCentric#setDrive expects strafe inputs where positive values move the
-        // robot to the *left*. Convert the right-positive convention produced by the
-        // rotation above so we drive the mecanum solver with matching semantics.
-        double robotStrafe = -robotStrafeRight;
 
         double lf = robotForward + robotStrafe + rotate;
         double rf = robotForward - robotStrafe - rotate;
