@@ -3,93 +3,77 @@ package org.firstinspires.ftc.teamcode.teleop;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.IMU;
+import com.qualcomm.robotcore.hardware.IMU.Parameters;
+import com.qualcomm.hardware.rev.RevHubOrientationOnRobot;
+
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
-import org.firstinspires.ftc.teamcode.subsystems.*;
-import com.qualcomm.robotcore.hardware.Gamepad;
+import org.firstinspires.ftc.robotcore.external.navigation.YawPitchRollAngles;
+import org.firstinspires.ftc.teamcode.subsystems.FieldCentric;
 
 @TeleOp(name = "OmniShooterTeleOp")
 public class OmniShooterTeleOp extends OpMode {
-
-    // Subsystems
     private FieldCentric drive;
-    private ShooterSubsystem shooter;
-    private LimelightAprilTag limelight;
     private IMU imu;
-
-    // Shooter constants
-    private static final double GOAL_HEIGHT_METERS = 0.9845; // goal height (meters)
-    private static final int TARGET_TAG_ID = 20; // april tag id for the goal (20 for blue, 24 for red)
-    private double hdoffset = 0; // heading offset for field centric drive
+    private double headingOffsetRad = 0.0;
 
     @Override
     public void init() {
-        // Initialize IMU
         imu = hardwareMap.get(IMU.class, "imu");
-        IMU.Parameters params = new IMU.Parameters(
-                new com.qualcomm.hardware.rev.RevHubOrientationOnRobot(
-                        com.qualcomm.hardware.rev.RevHubOrientationOnRobot.LogoFacingDirection.UP,
-                        com.qualcomm.hardware.rev.RevHubOrientationOnRobot.UsbFacingDirection.FORWARD
-                )
-        );
+        Parameters params = new Parameters(new RevHubOrientationOnRobot(
+                RevHubOrientationOnRobot.LogoFacingDirection.UP,
+                RevHubOrientationOnRobot.UsbFacingDirection.FORWARD
+        ));
         imu.initialize(params);
 
-        // Initialize drive system
         drive = new FieldCentric();
         drive.init(hardwareMap);
 
-        // Initialize shooter (uncomment once you have your shooter subsystem set up)
-        // shooter = new ShooterSubsystem(hardwareMap, "flywheel", "feederServo");
-        // shooter.setFeederPositions(0.0, 1.0);
-
-        // Initialize limelight (uncomment once ready)
-        // limelight = new LimelightAprilTag("http://limelight.local:5801", TARGET_TAG_ID);
+        headingOffsetRad = getYawRadians();
     }
 
     @Override
     public void loop() {
-        // Get drive control inputs
-        double strafe = -gamepad1.left_stick_x; //right is +
-        double forward = gamepad1.left_stick_y; //up is +
-        double rotate = -gamepad1.right_stick_x; //ccw is +
+        double strafe = applyDeadband(gamepad1.left_stick_x);
+        double forward = applyDeadband(-gamepad1.left_stick_y); // up on the stick -> positive forward
+        double rotate = applyDeadband(-gamepad1.right_stick_x);
 
-        // Reset heading offset when Y is pressed
+        double slowMultiplier = gamepad1.left_bumper ? 0.4 : 1.0;
+        double fineRotateMultiplier = gamepad1.right_bumper ? 0.6 : 1.0;
+
+        double heading = normalizeRadians(getYawRadians() - headingOffsetRad);
+
+        drive.driveFieldCentric(strafe * slowMultiplier, forward * slowMultiplier, rotate * fineRotateMultiplier, heading);
+
         if (gamepad1.y) {
-            hdoffset = imu.getRobotYawPitchRollAngles().getYaw(AngleUnit.RADIANS);
+            headingOffsetRad = getYawRadians();
         }
 
-        // Compute heading relative to offset
-        double rawhd = imu.getRobotYawPitchRollAngles().getYaw(AngleUnit.RADIANS);
-        double hdrad = rawhd - hdoffset;
-
-        // Drive the robot
-        drive.setDrive(strafe, forward, rotate, hdrad);
-
-        // Shooter logic (uncomment when ready)
-        /*
-        double[] tagPose = limelight.getTargetPose();
-        double distance = limelight.getDistanceMeters();
-        double targetRPM = 0.0;
-
-        if (distance > 0) {
-            double v0 = shooter.computeRequiredBallVelocity(distance, GOAL_HEIGHT_METERS);
-            targetRPM = shooter.ballSpeedToTargetRPM(v0);
-            shooter.setTargetRPM(targetRPM);
-        } else {
-            shooter.setTargetRPM(0.0);
-        }
-
-        shooter.update();
-
-        if (gamepad2.a && shooter.isAtTargetRPM()) {
-            shooter.requestFeed();
-        }
-
-        telemetry.addData("Tag Pose", tagPose != null ? String.format("[%.2f, %.2f, %.2f]", tagPose[0], tagPose[1], tagPose[2]) : "Not seen");
-        telemetry.addData("Distance (m)", distance);
-        telemetry.addData("Target RPM", targetRPM);
-        telemetry.addData("Flywheel RPM", shooter.getFlywheelRPM());
-        telemetry.addData("At Target RPM", shooter.isAtTargetRPM());
+        telemetry.addData("Heading (rad)", heading);
+        telemetry.addData("Heading (deg)", Math.toDegrees(heading));
+        telemetry.addData("FL", drive.getLastFL());
+        telemetry.addData("FR", drive.getLastFR());
+        telemetry.addData("BL", drive.getLastBL());
+        telemetry.addData("BR", drive.getLastBR());
         telemetry.update();
-        */
+    }
+
+    private double applyDeadband(double value) {
+        double deadband = 0.05;
+        return Math.abs(value) > deadband ? value : 0.0;
+    }
+
+    private double getYawRadians() {
+        YawPitchRollAngles angles = imu.getRobotYawPitchRollAngles();
+        return angles.getYaw(AngleUnit.RADIANS);
+    }
+
+    private double normalizeRadians(double angle) {
+        while (angle > Math.PI) {
+            angle -= 2.0 * Math.PI;
+        }
+        while (angle < -Math.PI) {
+            angle += 2.0 * Math.PI;
+        }
+        return angle;
     }
 }
