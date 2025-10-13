@@ -45,26 +45,30 @@ public class FieldCentric {
     public void setDrive(double x, double y, double rx, double hdRad) {
         double c = Math.cos(hdRad);
         double s = Math.sin(hdRad);
-        
-        double rtx = x*c+y*s; //rotated x
-        double rty = -x*s+y*c; //rotated y
 
-        double lfPow = rty+rtx+rx;
-        double rfPow = rty-rtx-rx;
-        double lbPow = rty-rtx+rx;
-        double rbPow = rty+rtx-rx;
+        double rtx = x * c - y * s; // rotated strafe component
+        double rty = x * s + y * c; // rotated forward component
+
+        double lfPow = rty + rtx + rx;
+        double rfPow = rty - rtx - rx;
+        double lbPow = rty - rtx + rx;
+        double rbPow = rty + rtx - rx;
 
         double max = Math.max(1.0, Math.max(Math.abs(lfPow), Math.max(Math.abs(rfPow), Math.max(Math.abs(lbPow), Math.abs(rbPow)))));
 
-        lfPow/=max;
-        rfPow/=max;
-        lbPow/=max;
-        rbPow/=max;
+        lfPow /= max;
+        rfPow /= max;
+        lbPow /= max;
+        rbPow /= max;
 
-        leftFront.setPower(lfPow); lastFL = lfPow;
-        rightFront.setPower(rfPow); lastFR = rfPow;
-        leftBack.setPower(lbPow); lastBL = rfPow;
-        rightBack.setPower(rbPow); lastBR = rbPow;
+        leftFront.setPower(lfPow);
+        lastFL = lfPow;
+        rightFront.setPower(rfPow);
+        lastFR = rfPow;
+        leftBack.setPower(lbPow);
+        lastBL = lbPow;
+        rightBack.setPower(rbPow);
+        lastBR = rbPow;
     }
     //getters for data
     public double getLastFL() {return lastFL;}
