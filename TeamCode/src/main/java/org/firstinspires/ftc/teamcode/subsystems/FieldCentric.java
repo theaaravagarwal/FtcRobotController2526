@@ -1,81 +1,125 @@
 package org.firstinspires.ftc.teamcode.subsystems;
 
 import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.HardwareMap;
-import com.qualcomm.robotcore.hardware.IMU;
-import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 
 /**
- * RobotCentric subsystem
- * -call init(hardwareMap) from the OpMode init()
- * -call setDrive(strafe, forward, rotation) every loop to drive
+ * Simple helper for field centric mecanum drive calculations.
+ *
+ * <p>Usage:
+ * <ol>
+ *     <li>Create an instance and optionally override motor names.</li>
+ *     <li>Call {@link #init(HardwareMap)} from the OpMode's {@code init()}.</li>
+ *     <li>Call {@link #driveFieldCentric(double, double, double, double)} every loop.</li>
+ * </ol>
  */
 public class FieldCentric {
-    private DcMotor leftFront, rightFront, leftBack, rightBack;
-    //last applied powers
-    private double lastFL = 0.0, lastFR = 0.0, lastBL = 0.0, lastBR = 0.0;
-    //robot config names
+    private DcMotor leftFront;
+    private DcMotor rightFront;
+    private DcMotor leftBack;
+    private DcMotor rightBack;
+
     private String leftFrontName = "leftFront";
     private String rightFrontName = "rightFront";
     private String leftBackName = "leftBack";
     private String rightBackName = "rightBack";
-    public FieldCentric() {}
-    public void init(HardwareMap hw) {
-        leftFront = hw.get(DcMotor.class, leftFrontName);
-        rightFront = hw.get(DcMotor.class, rightFrontName);
-        leftBack = hw.get(DcMotor.class, leftBackName);
-        rightBack = hw.get(DcMotor.class, rightBackName);
-        //set directions to match your wiring/gearing
-        leftFront.setDirection(DcMotor.Direction.FORWARD);
-        leftBack.setDirection(DcMotor.Direction.FORWARD);
-        rightFront.setDirection(DcMotor.Direction.REVERSE);
-        rightBack.setDirection(DcMotor.Direction.REVERSE);
-        //dont use encoders
-        leftFront.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-        rightFront.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-        leftBack.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-        rightBack.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-        //when we have no power brake
-        leftFront.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
-        rightFront.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
-        leftBack.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
-        rightBack.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+
+    private double lastFL = 0.0;
+    private double lastFR = 0.0;
+    private double lastBL = 0.0;
+    private double lastBR = 0.0;
+
+    public FieldCentric() {
+        // Default constructor uses standard motor names
     }
-    //drive by: x = strafe (left +, right -), y = forward (forward +, back -), rx = rotation (ccw+)
-    public void setDrive(double x, double y, double rx, double hd) {
-        double c = Math.cos(hd); //rad
-        double s = Math.sin(hd); //rad
-        
-        double rtx = x*c-y*s; //rotated x (strafe)
-        double rty = x*s+y*c; //rotated y (forward)
 
-        double lfPow = rty+rtx+rx;
-        double rfPow = rty-rtx-rx;
-        double lbPow = rty-rtx+rx;
-        double rbPow = rty+rtx-rx;
-
-        double max = Math.max(1.0, Math.max(Math.abs(lfPow), Math.max(Math.abs(rfPow), Math.max(Math.abs(lbPow), Math.abs(rbPow)))));
-
-        lfPow/=max;
-        rfPow/=max;
-        lbPow/=max;
-        rbPow/=max;
-
-        leftFront.setPower(lfPow); lastFL = lfPow;
-        rightFront.setPower(rfPow); lastFR = rfPow;
-        leftBack.setPower(lbPow); lastBL = lbPow;
-        rightBack.setPower(rbPow); lastBR = rbPow;
+    public FieldCentric(String leftFrontName, String rightFrontName, String leftBackName, String rightBackName) {
+        setMotorNames(leftFrontName, rightFrontName, leftBackName, rightBackName);
     }
-    //getters for data
-    public double getLastFL() {return lastFL;}
-    public double getLastFR() {return lastFR;}
-    public double getLastBL() {return lastBL;}
-    public double getLastBR() {return lastBR;}
-    //for custom motor names
-    public void setMotorNames(String fl, String fr, String bl, String br) {
-        this.leftFrontName = fl;
-        this.rightFrontName = fr;
-        this.leftBackName = bl;
-        this.rightBackName = br;
+
+    public void setMotorNames(String leftFrontName, String rightFrontName, String leftBackName, String rightBackName) {
+        this.leftFrontName = leftFrontName;
+        this.rightFrontName = rightFrontName;
+        this.leftBackName = leftBackName;
+        this.rightBackName = rightBackName;
+    }
+
+    public void init(HardwareMap hardwareMap) {
+        leftFront = hardwareMap.get(DcMotor.class, leftFrontName);
+        rightFront = hardwareMap.get(DcMotor.class, rightFrontName);
+        leftBack = hardwareMap.get(DcMotor.class, leftBackName);
+        rightBack = hardwareMap.get(DcMotor.class, rightBackName);
+
+        // Adjust motor directions to match a conventional mecanum layout
+        leftFront.setDirection(DcMotorSimple.Direction.FORWARD);
+        leftBack.setDirection(DcMotorSimple.Direction.FORWARD);
+        rightFront.setDirection(DcMotorSimple.Direction.REVERSE);
+        rightBack.setDirection(DcMotorSimple.Direction.REVERSE);
+
+        for (DcMotor motor : new DcMotor[]{leftFront, rightFront, leftBack, rightBack}) {
+            motor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+            motor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        }
+    }
+
+    /**
+     * Convert driver field inputs into mecanum wheel powers.
+     *
+     * @param fieldStrafe desired field strafe (+ to the right)
+     * @param fieldForward desired field forward (+ away from the driver station)
+     * @param rotate desired rotational rate (+ CCW)
+     * @param headingRad robot heading in radians, measured CCW from the field forward direction
+     */
+    public void driveFieldCentric(double fieldStrafe, double fieldForward, double rotate, double headingRad) {
+        double cos = Math.cos(headingRad);
+        double sin = Math.sin(headingRad);
+
+        // Rotate the field vector by -heading to obtain robot-centric motion commands
+        double robotStrafe = fieldStrafe * cos + fieldForward * sin;
+        double robotForward = -fieldStrafe * sin + fieldForward * cos;
+
+        double lf = robotForward + robotStrafe + rotate;
+        double rf = robotForward - robotStrafe - rotate;
+        double lb = robotForward - robotStrafe + rotate;
+        double rb = robotForward + robotStrafe - rotate;
+
+        double max = Math.max(1.0, Math.max(Math.abs(lf), Math.max(Math.abs(rf), Math.max(Math.abs(lb), Math.abs(rb)))));
+
+        lf /= max;
+        rf /= max;
+        lb /= max;
+        rb /= max;
+
+        applyPower(leftFront, lf);  lastFL = lf;
+        applyPower(rightFront, rf); lastFR = rf;
+        applyPower(leftBack, lb);   lastBL = lb;
+        applyPower(rightBack, rb);  lastBR = rb;
+    }
+
+    public void stop() {
+        driveFieldCentric(0.0, 0.0, 0.0, 0.0);
+    }
+
+    private void applyPower(DcMotor motor, double power) {
+        if (motor != null) {
+            motor.setPower(power);
+        }
+    }
+
+    public double getLastFL() {
+        return lastFL;
+    }
+
+    public double getLastFR() {
+        return lastFR;
+    }
+
+    public double getLastBL() {
+        return lastBL;
+    }
+
+    public double getLastBR() {
+        return lastBR;
     }
 }
