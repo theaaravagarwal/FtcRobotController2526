@@ -42,12 +42,12 @@ public class FieldCentric {
         rightBack.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
     }
     //drive by: x = strafe (left +, right -), y = forward (forward +, back -), rx = rotation (ccw+)
-    public void setDrive(double x, double y, double rx, double hdRad) {
-        double c = Math.cos(-hdRad);
-        double s = Math.sin(-hdRad);
+    public void setDrive(double x, double y, double rx, double hd) {
+        double c = Math.cos(hd); //rad
+        double s = Math.sin(hd); //rad
         
-        double rtx = x*c-y*s; //rotated x
-        double rty = x*s+y*c; //rotated y
+        double rtx = x*c-y*s; //rotated x (strafe)
+        double rty = x*s+y*c; //rotated y (forward)
 
         double lfPow = rty+rtx+rx;
         double rfPow = rty-rtx-rx;
