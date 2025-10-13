@@ -43,8 +43,8 @@ public class FieldCentric {
     }
     //drive by: x = strafe (left +, right -), y = forward (forward +, back -), rx = rotation (ccw+)
     public void setDrive(double x, double y, double rx, double hdRad) {
-        double c = Math.cos(hdRad);
-        double s = Math.sin(hdRad);
+        double c = Math.cos(-hdRad);
+        double s = Math.sin(-hdRad);
         
         double rtx = x*c+y*s; //rotated x
         double rty = -x*s+y*c; //rotated y
@@ -63,7 +63,7 @@ public class FieldCentric {
 
         leftFront.setPower(lfPow); lastFL = lfPow;
         rightFront.setPower(rfPow); lastFR = rfPow;
-        leftBack.setPower(lbPow); lastBL = rfPow;
+        leftBack.setPower(lbPow); lastBL = lbPow;
         rightBack.setPower(rbPow); lastBR = rbPow;
     }
     //getters for data
