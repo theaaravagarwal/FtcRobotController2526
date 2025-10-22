@@ -4,6 +4,7 @@ import android.graphics.Color;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.NormalizedColorSensor;
 import com.qualcomm.robotcore.hardware.SwitchableLight;
+import com.qualcomm.robotcore.hardware.NormalizedRGBA;
 
 public class BallColorSensor {
     public enum DetectedColor {
@@ -52,7 +53,7 @@ public class BallColorSensor {
             return lastDetected;
         }
 
-        NormalizedColorSensor.NormalizedRGBA colors = colorSensor.getNormalizedColors();
+        NormalizedRGBA colors = colorSensor.getNormalizedColors();
         Color.colorToHSV(colors.toColor(), hsv);
         lastHue = hsv[0];
         lastSaturation = hsv[1];
