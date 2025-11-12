@@ -1,79 +1,79 @@
+//controller 1 = driver (movement)
+//controller 2 = operator (attachment, unused)
 package org.firstinspires.ftc.teamcode.teleop;
 
+import com.qualcomm.hardware.rev.RevHubOrientationOnRobot;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.IMU;
-import com.qualcomm.robotcore.hardware.IMU.Parameters;
-import com.qualcomm.hardware.rev.RevHubOrientationOnRobot;
+import com.qualcomm.robotcore.hardware.Servo;
+import com.qualcomm.robotcore.util.Range;
 
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.YawPitchRollAngles;
+import org.firstinspires.ftc.teamcode.subsystems.BallColorSensor;
 import org.firstinspires.ftc.teamcode.subsystems.FieldCentric;
+import org.firstinspires.ftc.teamcode.subsystems.ShooterSubsystem;
 
 @TeleOp(name = "OmniShooterTeleOp")
 public class OmniShooterTeleOp extends OpMode {
     private FieldCentric drive;
     private IMU imu;
+    private boolean imuReady = false;
+    private boolean fieldCentricMode = true; //start on fieldcentric
+    private boolean prevToggle = false;
     private double headingOffsetRad = 0.0;
-
     @Override
     public void init() {
-        imu = hardwareMap.get(IMU.class, "imu");
-        Parameters params = new Parameters(new RevHubOrientationOnRobot(
-                RevHubOrientationOnRobot.LogoFacingDirection.UP,
-                RevHubOrientationOnRobot.UsbFacingDirection.FORWARD
-        ));
-        imu.initialize(params);
-
         drive = new FieldCentric();
         drive.init(hardwareMap);
-
-        headingOffsetRad = getYawRadians();
-    }
-
-    @Override
-    public void loop() {
-        double strafe = applyDeadband(gamepad1.left_stick_x);
-        double forward = applyDeadband(-gamepad1.left_stick_y); // up on the stick -> positive forward
-        double rotate = applyDeadband(-gamepad1.right_stick_x);
-
-        double slowMultiplier = gamepad1.left_bumper ? 0.4 : 1.0;
-        double fineRotateMultiplier = gamepad1.right_bumper ? 0.6 : 1.0;
-
-        double heading = normalizeRadians(getYawRadians() - headingOffsetRad);
-
-        drive.driveFieldCentric(strafe * slowMultiplier, forward * slowMultiplier, rotate * fineRotateMultiplier, heading);
-
-        if (gamepad1.y) {
-            headingOffsetRad = getYawRadians();
-        }
-
-        telemetry.addData("Heading (rad)", heading);
-        telemetry.addData("Heading (deg)", Math.toDegrees(heading));
-        telemetry.addData("FL", drive.getLastFL());
-        telemetry.addData("FR", drive.getLastFR());
-        telemetry.addData("BL", drive.getLastBL());
-        telemetry.addData("BR", drive.getLastBR());
+        initImu();
+        headingOffsetRad = imuReady?getYawRadians():0.0;
+        telemetry.addLine("Init complete. Field-centric: ON");
         telemetry.update();
     }
-
-    private double applyDeadband(double value) {
-        double deadband = 0.05;
-        return Math.abs(value) > deadband ? value : 0.0;
+    @Override
+    public void loop() {
+        handleModeToggle();
+        double heading = 0.0;
+        if (imuReady && fieldCentricMode) {
+            heading = getYawRadians() - headingOffsetRad;
+            heading = normalizeRadians(heading);
+        }
+        driveRobot(heading);
+        telemetry.addData("Mode", fieldCentricMode ? "Field-Centric" : "Robot-Centric");
+        telemetry.addData("Heading (deg)", Math.toDegrees(heading));
+        telemetry.update();
     }
-
+    private void handleModeToggle() {
+        boolean togglePressed = gamepad1.right_bumper;
+        if (togglePressed&&!prevToggle) fieldCentricMode = !fieldCentricMode;
+        prevToggle = togglePressed;
+    }
+    private void driveRobot(double heading) {
+        double strafe = applyDeadband(gamepad1.left_stick_x);
+        double forward = applyDeadband(-gamepad1.left_stick_y);
+        double rotate = applyDeadband(-gamepad1.right_stick_x);
+        if (fieldCentricMode && imuReady) drive.driveFieldCentric(strafe, forward, rotate, heading);
+        else drive.driveFieldCentric(strafe, forward, rotate, 0.0);
+        else drive.driveRobotCentric(strafe, forward, rotate);
+    }
+    private double applyDeadband(double x) {return Math.abs(x)>0.05?x:0.0;}
+    private void initImu() {
+        try {
+            imu = hardwareMap.get(IMU.class, "imu");
+            IMU.Parameters params = new IMU.Parameters(new RevHubOrientationOnRobot(RevHubOrientationOnRobot.LogoFacingDirection.UP, RevHubOrientationOnRobot.UsbFacingDirection.FORWARD));
+            imu.initialize(params); imu.resetYaw();
+            imuReady = true;
+        } catch (Exception e) {imuReady = false;}
+    }
     private double getYawRadians() {
         YawPitchRollAngles angles = imu.getRobotYawPitchRollAngles();
         return angles.getYaw(AngleUnit.RADIANS);
     }
-
-    private double normalizeRadians(double angle) {
-        while (angle > Math.PI) {
-            angle -= 2.0 * Math.PI;
-        }
-        while (angle < -Math.PI) {
-            angle += 2.0 * Math.PI;
-        }
-        return angle;
+    private double normalizeRadians(double x) {
+        while (x>Math.PI) x-=2*Math.PI;
+        while (x<-Math.PI) x+=2*Math.PI;
+        return x;
     }
 }

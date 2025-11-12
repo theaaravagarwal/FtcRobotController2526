@@ -3,17 +3,6 @@ package org.firstinspires.ftc.teamcode.subsystems;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.HardwareMap;
-
-/**
- * Simple helper for field centric mecanum drive calculations.
- *
- * <p>Usage:
- * <ol>
- *     <li>Create an instance and optionally override motor names.</li>
- *     <li>Call {@link #init(HardwareMap)} from the OpMode's {@code init()}.</li>
- *     <li>Call {@link #driveFieldCentric(double, double, double, double)} every loop.</li>
- * </ol>
- */
 public class FieldCentric {
     private DcMotor leftFront;
     private DcMotor rightFront;
@@ -30,9 +19,7 @@ public class FieldCentric {
     private double lastBL = 0.0;
     private double lastBR = 0.0;
 
-    public FieldCentric() {
-        // Default constructor uses standard motor names
-    }
+    public FieldCentric() {}
 
     public FieldCentric(String leftFrontName, String rightFrontName, String leftBackName, String rightBackName) {
         setMotorNames(leftFrontName, rightFrontName, leftBackName, rightBackName);
