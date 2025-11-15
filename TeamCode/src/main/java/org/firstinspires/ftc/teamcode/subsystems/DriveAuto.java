@@ -15,7 +15,7 @@ public class DriveAuto {
         this.drive = drive;
         this.pinpoint = pinpoint;
         this.opMode = opMode;
-
+    }
     private double normalize(double x) {
         while (x>Math.PI) x-=2*Math.PI;
         while (x<-Math.PI) x+=2*Math.PI;
