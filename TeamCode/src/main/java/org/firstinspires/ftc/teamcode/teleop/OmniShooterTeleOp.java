@@ -32,7 +32,7 @@ public class OmniShooterTeleOp extends OpMode {
         handleModeToggle();
         double heading = 0.0;
         if (pinpointReady&&fieldCentricMode) {
-            heading = getHeading()-headingOffsetRad;
+            heading = getHeading()-headingOffsetRad+Math.PI; //offsetted by 180 deg cuz the pinpoint is backwards lol
             heading = normalizeRadians(heading);
         }
         driveRobot(heading);
@@ -53,12 +53,22 @@ public class OmniShooterTeleOp extends OpMode {
         if (togglePressed&&!prevToggle) fieldCentricMode = !fieldCentricMode;
         prevToggle = togglePressed;
     }
+    // private void driveRobot(double headingRad) {
+    //     double mult;
+    //     if (gamepad1.left_bumper) mult = 0.4;
+    //     else mult = 1.0+(gamepad1.left_trigger*0.3);
+    //     double lat = applyDeadband(gamepad1.left_stick_x)*mult;
+    //     double vert = applyDeadband(-gamepad1.left_stick_y)*mult;
+    //     double rot = applyDeadband(-gamepad1.right_stick_x)*(mult*0.8);
+    //     if (fieldCentricMode&&pinpointReady) drive.fieldCentric(lat, vert, rot, headingRad);
+    //     else drive.robotCentric(lat, vert, rot);
+    // }
     private void driveRobot(double headingRad) {
         double mult;
         if (gamepad1.left_bumper) mult = 0.4;
         else mult = 1.0+(gamepad1.left_trigger*0.3);
         double lat = applyDeadband(gamepad1.left_stick_x)*mult;
-        double vert = applyDeadband(-gamepad1.left_stick_y)*mult;
+        double vert = applyDeadband(gamepad1.left_stick_y)*mult;
         double rot = applyDeadband(-gamepad1.right_stick_x)*(mult*0.8);
         if (fieldCentricMode&&pinpointReady) drive.fieldCentric(lat, vert, rot, headingRad);
         else drive.robotCentric(lat, vert, rot);
@@ -83,8 +93,7 @@ public class OmniShooterTeleOp extends OpMode {
     private void configurePinpoint() {
         pinpoint.setOffsets(-84.0, -168.0, DistanceUnit.MM);
         pinpoint.setEncoderResolution(GoBildaPinpointDriver.GoBildaOdometryPods.goBILDA_4_BAR_POD);
-        pinpoint.setEncoderDirections(GoBildaPinpointDriver.EncoderDirection.FORWARD,
-                GoBildaPinpointDriver.EncoderDirection.FORWARD);
+        pinpoint.setEncoderDirections(GoBildaPinpointDriver.EncoderDirection.FORWARD, GoBildaPinpointDriver.EncoderDirection.FORWARD);
         pinpoint.resetPosAndIMU();
     }
 }

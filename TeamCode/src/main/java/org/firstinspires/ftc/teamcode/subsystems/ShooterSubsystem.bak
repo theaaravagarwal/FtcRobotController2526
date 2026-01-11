@@ -1,0 +1,340 @@
+// package org.firstinspires.ftc.teamcode.subsystems;
+
+// import com.qualcomm.robotcore.hardware.DcMotorEx;
+// import com.qualcomm.robotcore.hardware.DcMotor;
+// import com.qualcomm.robotcore.hardware.HardwareMap;
+// import com.qualcomm.robotcore.hardware.Servo;
+// import com.qualcomm.robotcore.util.ElapsedTime;
+
+// /*
+//  * ShooterSubsystem: computes muzzle speed, maps to flywheel RPM, controls flywheel with a PI controller, and controls a servo feeder in async
+//  *
+//  * IMPORTANT: tune RPM_PER_MS, RPM_OFFSET, kP, kI, and servo positions from hardware later
+//  */
+// public class ShooterSubsystem {
+//     //hardware
+//     private final DcMotorEx flywheel;
+//     private final Servo feeder;
+
+//     //timing
+//     private final ElapsedTime timer = new ElapsedTime();
+//     private double lastTime = 0.0;
+
+//     //physics constants
+//     private final double g = 9.80665; //accurate constant for gravity (m/s^2)
+//     private double launchAngleRad = Math.toRadians(60.0); //launch angle of the shooter (degrees, converted to radians)
+//     private double shooterHeightMeters = 0.40; //height of shooter from the floor (meters)
+
+//     //FIXME: placeholder values for a typical 4" wheel shooter
+//     //needs to be tuned with lin regression (ball spd->rpm)
+//     private double RPM_PER_MS = 120.0; //rpm per (m/s)
+//     private double RPM_OFFSET = 0.0; //rpm offset (should be small)
+
+//     //motor/encoder
+//     private final double TICKS_PER_REV;
+
+//     //controller (PI)
+//     private double kP = 0.0008; //prop gain
+//     private double kI = 0.0006; //int gain
+//     private double integrator = 0.0; //integral term
+//     private double integratorMin = -1.0, integratorMax = 1.0; //integrator lims
+//     private double maxPower = 1.0; //max motor pow
+
+//     //tolerance for "at target"
+//     private double rpmTolerance = 50.0; //rpm
+
+//     //state
+//     private double targetRPM = 0.0; //desired rpm
+
+//     //feeder state machine (async)
+//     private enum FeederState {IDLE, PULSE_OUT, WAIT_RETRACT}
+//     private FeederState feederState = FeederState.IDLE;
+//     private double feederStateStart = 0.0; //time when we entered state
+//     private long feederPulseMs = 150; //pulse duration for "out"
+//     private long feederRetractDelayMs = 120; //how long to wait before retract
+//     private double feederStartPos = 0.0; //servo start (retracted) position
+//     private double feederEndPos = 1.0; //servo pushed position
+
+//     public ShooterSubsystem(HardwareMap hw, String flywheelName, String feederServoName) {
+//         flywheel = hw.get(DcMotorEx.class, flywheelName);
+//         //allow using dcmotor if user only has dcmotor configured; convert if needed
+//         if (flywheel==null) throw new IllegalArgumentException("Flywheel motor (DcMotorEx) not found: "+flywheelName);
+//         flywheel.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+//         flywheel.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
+//         TICKS_PER_REV = flywheel.getMotorType().getTicksPerRev();
+//         if (feederServoName!=null&&!feederServoName.isEmpty()) feeder = hw.get(Servo.class, feederServoName);
+//         else feeder = null; //no feeder
+//         lastTime = timer.seconds(); //update timer with last time
+//     }
+
+//     //config setters for tuning
+//     public void setLaunchAngleDegrees(double deg) {launchAngleRad = Math.toRadians(deg);}
+//     public void setShooterHeightMeters(double h) {shooterHeightMeters = h;}
+//     public void setRegressionCoeffs(double slopeRpmPerMs, double offsetRpm) {
+//         this.RPM_PER_MS = slopeRpmPerMs;
+//         this.RPM_OFFSET = offsetRpm;
+//     }
+//     public void setGains(double p, double i) { this.kP = p; this.kI = i; }
+//     public void setRpmTolerance(double tol) { this.rpmTolerance = tol; }
+//     public void setFeederTimings(long pulseMs, long retractDelayMs) {
+//         this.feederPulseMs = pulseMs;
+//         this.feederRetractDelayMs = retractDelayMs;
+//     }
+//     public void setFeederPositions(double startPos, double endPos) {
+//         this.feederStartPos = startPos;
+//         this.feederEndPos = endPos;
+//         if (feeder!=null) feeder.setPosition(feederStartPos);
+//     }
+
+//     //encoder/rpm conversions
+//     private double encoderTicksPerSecToRPM(double ticksPerSec) {
+//         return ticksPerSec * 60.0/TICKS_PER_REV;
+//     }
+//     public double getFlywheelRPM() {
+//         double velTicksPerSec = flywheel.getVelocity(); //ticks per sec
+//         return encoderTicksPerSecToRPM(velTicksPerSec);
+//     }
+
+//     //projectile math, src:(https://medium.com/@vikramaditya.nishant/programming-a-decode-shooter-4ab114dac01f)
+//     public double computeRequiredBallVelocity(double distanceMeters, double goalHeightMeters) {
+//         double denom = 2.0*Math.cos(launchAngleRad)*Math.cos(launchAngleRad)*(distanceMeters*Math.tan(launchAngleRad)-(goalHeightMeters-shooterHeightMeters));
+//         if (denom<=0.0) return Double.NaN;
+//         double numer = g*distanceMeters*distanceMeters;
+//         double res = numer/denom;
+//         if (res<=0.0) return Double.NaN;
+//         return Math.sqrt(res);
+//     }
+//     public double computeRequiredBallVelocityWhileMoving(double initialDistanceMeters, double robotRelativeVelAlongGoalAxisMetersPerSec, double goalHeightMeters, int iters) {
+//         double x = initialDistanceMeters; //start with initial dist
+//         double v0 = computeRequiredBallVelocity(x, goalHeightMeters); //first guess
+//         if (Double.isNaN(v0)) return Double.NaN; //give up and despair
+//         for (int i=0; i<iters; i++) {
+//             double t = x/(v0*Math.cos(launchAngleRad)); //time to reach goal
+//             double xEffective = initialDistanceMeters-robotRelativeVelAlongGoalAxisMetersPerSec*t; //effective dist
+//             if (xEffective<=0.0) xEffective = 0.01; //avoid div0 or neg dist
+//             double newV0 = computeRequiredBallVelocity(xEffective, goalHeightMeters); //recompute
+//             if (Double.isNaN(newV0)) return Double.NaN; //give up and despair pt2
+//             v0 = newV0; x = xEffective; //update for next iter
+//         }
+//         return v0;
+//     }
+//     public double ballSpeedToTargetRPM(double ballSpeedMps) {
+//         return RPM_PER_MS*ballSpeedMps+RPM_OFFSET;
+//     }
+//     public void setTargetRPM(double rpm) {this.targetRPM = rpm;}
+//     public boolean isAtTargetRPM() {
+//         return Math.abs(getFlywheelRPM()-targetRPM)<=rpmTolerance;
+//     }
+
+//     //request a feed (async)
+//     public void requestFeed() {
+//         if (feeder==null) return; //no feeder, then despair
+//         if (feederState==FeederState.IDLE) { //if we idle then start
+//             feederState = FeederState.PULSE_OUT; //start pulse out
+//             feederStateStart = timer.milliseconds(); //keep track of time
+//             feeder.setPosition(feederEndPos); //move servo out
+//         }
+//     }
+//     //call to update controller and feeder state machine
+//     public void update() {
+//         double now = timer.seconds(); //current time
+//         double dt = now-lastTime; //time since last update
+//         if (dt<=0.0) dt = 1e-3; //avoid div by 0
+//         lastTime = now; //update last time
+//         //controller for flywheel
+//         double currentRPM = getFlywheelRPM(); //current rpm gotten
+//         double error = targetRPM-currentRPM; //difference in rpm
+//         integrator+=error*dt; //integrate error
+//         if (integrator>integratorMax) integrator = integratorMax; //limiting if too big
+//         if (integrator<integratorMin) integrator = integratorMin; //limiting if too small
+//         double power = kP*error+kI*integrator; //calculate power to apply to motor
+//         if (power>maxPower) power = maxPower; //upper bound limit to power
+//         if (power<-maxPower) power = -maxPower; //lower bound limit to power
+//         flywheel.setPower(power); //apply power to the motor
+//         //feeder state machine (async)
+//         if (feeder!=null) { //if we have a feeder
+//             double tMs = timer.milliseconds();
+//             switch (feederState) { //this switch just runs the state machine
+//                 case IDLE:
+//                     //nothing
+//                     break;
+//                 case PULSE_OUT:
+//                     if (tMs-feederStateStart>=feederPulseMs) {
+//                         //move to retract
+//                         feeder.setPosition(feederStartPos); //retract now or after short wait
+//                         feederState = FeederState.WAIT_RETRACT; //next state
+//                         feederStateStart = tMs; //update time
+//                     }
+//                     break;
+//                 case WAIT_RETRACT:
+//                     if (tMs-feederStateStart>=feederRetractDelayMs) { //done waiting, retract
+//                         feeder.setPosition(feederStartPos); //retract to start pos
+//                         feederState = FeederState.IDLE; //back to idle
+//                     }
+//                     break;
+//             }
+//         }
+//     }
+// }
+
+package org.firstinspires.ftc.teamcode.subsystems;
+
+import com.qualcomm.robotcore.hardware.DcMotorEx;
+import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.hardware.HardwareMap;
+import com.qualcomm.robotcore.hardware.Servo;
+import com.qualcomm.robotcore.util.ElapsedTime;
+
+/*
+ * ShooterSubsystem tuned for:
+ * - 50mm Wheel 
+ * - 60g Ball
+ * - 82-inch Distance (Fixed)
+ * - 1-meter Goal Height
+ */
+public class ShooterSubsystem {
+    // --- Hardware ---
+    private final DcMotorEx flywheel;
+    private final Servo feeder;
+
+    // --- Timing ---
+    private final ElapsedTime timer = new ElapsedTime();
+    private double lastTime = 0.0;
+
+    // --- Physics & Setup Constants ---
+    public static double LINE_SHOT_RPM = 5100.0;  // Tuned for ~50 deg launch at 82 inches
+    public static double RPM_TOLERANCE = 40.0;   // How close to target before firing
+    private final double TICKS_PER_REV;
+
+    // --- PI Controller Gains ---
+    // Small wheels need aggressive P to stay at high RPM and I to handle the 60g ball mass
+    private double kP = 0.0012;
+    private double kI = 0.0008; 
+    private double integrator = 0.0;
+    private final double integratorMax = 1.0;
+    private double targetRPM = 0.0;
+
+    // --- Feeder Servo State Machine ---
+    private enum FeederState { IDLE, PULSE_OUT, WAIT_RETRACT }
+    private FeederState feederState = FeederState.IDLE;
+    
+    private double feederStateStart = 0.0;
+    private final long PULSE_MS = 150;         // Time servo stays extended
+    private final long RETRACT_DELAY_MS = 150; // Wait before it can fire again
+    
+    public static double SERVO_START_POS = 0.0; // Retracted
+    public static double SERVO_END_POS = 0.4;   // Pushing ball (TUNE THIS)
+
+    private boolean fireRequested = false;
+
+    public ShooterSubsystem(HardwareMap hw, String flywheelName, String feederName) {
+        flywheel = hw.get(DcMotorEx.class, flywheelName);
+        flywheel.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        flywheel.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
+        TICKS_PER_REV = flywheel.getMotorType().getTicksPerRev();
+
+        feeder = hw.get(Servo.class, feederName);
+        if (feeder != null) feeder.setPosition(SERVO_START_POS);
+        
+        lastTime = timer.seconds();
+    }
+
+    // Main
+    
+    /**
+     * Call this to spin up and fire once ready.
+     */
+    public void manualFire() {
+        this.targetRPM = LINE_SHOT_RPM;
+        this.fireRequested = true;
+    }
+
+    /**
+     * Call this to shut everything down.
+     */
+    public void stopShooter() {
+        this.targetRPM = 0;
+        this.fireRequested = false;
+        this.integrator = 0;
+        flywheel.setPower(0);
+    }
+
+    // Logic
+
+    public void update() {
+        double now = timer.seconds();
+        double dt = now - lastTime;
+        if (dt <= 0.0) dt = 1e-3;
+        lastTime = now;
+
+        // 1. Calculate RPM
+        double currentRPM = getFlywheelRPM();
+
+        // 2. PI Controller
+        if (targetRPM > 100) {
+            double error = targetRPM - currentRPM;
+            integrator += error * dt;
+            
+            // Anti-windup
+            if (integrator > integratorMax) integrator = integratorMax;
+            if (integrator < -integratorMax) integrator = -integratorMax;
+
+            double power = (kP * error) + (kI * integrator);
+            flywheel.setPower(Math.max(0, Math.min(power, 1.0)));
+        } else {
+            flywheel.setPower(0);
+            integrator = 0;
+        }
+
+        // 3. Smart Firing Sequence
+        if (fireRequested && isAtTarget()) {
+            startFeederAction();
+            fireRequested = false; 
+        }
+
+        // 4. Feeder State Machine
+        updateFeeder(timer.milliseconds());
+    }
+
+    private void startFeederAction() {
+        if (feederState == FeederState.IDLE) {
+            feederState = FeederState.PULSE_OUT;
+            feederStateStart = timer.milliseconds();
+            if (feeder != null) feeder.setPosition(SERVO_END_POS);
+        }
+    }
+
+    private void updateFeeder(double nowMs) {
+        if (feeder == null) return;
+
+        switch (feederState) {
+            case PULSE_OUT:
+                if (nowMs - feederStateStart >= PULSE_MS) {
+                    feeder.setPosition(SERVO_START_POS);
+                    feederState = FeederState.WAIT_RETRACT;
+                    feederStateStart = nowMs;
+                }
+                break;
+            case WAIT_RETRACT:
+                if (nowMs - feederStateStart >= RETRACT_DELAY_MS) {
+                    feederState = FeederState.IDLE;
+                }
+                break;
+            case IDLE:
+                break;
+        }
+    }
+
+    // --- Helpers ---
+
+    public double getFlywheelRPM() {
+        return (flywheel.getVelocity() * 60.0) / TICKS_PER_REV;
+    }
+
+    public boolean isAtTarget() {
+        return targetRPM > 0 && Math.abs(getFlywheelRPM() - targetRPM) < RPM_TOLERANCE;
+    }
+
+    // Used for tuning/telemetry
+    public double getTargetRPM() { return targetRPM; }
+}
