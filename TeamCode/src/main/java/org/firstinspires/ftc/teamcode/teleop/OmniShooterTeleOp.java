@@ -63,14 +63,30 @@ public class OmniShooterTeleOp extends OpMode {
     //     if (fieldCentricMode&&pinpointReady) drive.fieldCentric(lat, vert, rot, headingRad);
     //     else drive.robotCentric(lat, vert, rot);
     // }
+    
+    // @Override
+    // public void init() {
+    // }
+
+    // @Override
+    // public void loop() {
+    //     if (gamepad1.a) {
+    //         shooter.runIntake();
+    //     } else if (gamepad1.b) {
+    //         shooter.shoot();
+    //     } else {
+    //         shooter.stop();
+    //     }
+    // }
+
     private void driveRobot(double headingRad) {
         double mult;
         if (gamepad1.left_bumper) mult = 0.4;
         else mult = 1.0+(gamepad1.left_trigger*0.3);
+        double vert = applyDeadband(-gamepad1.left_stick_y)*mult;
         double lat = applyDeadband(gamepad1.left_stick_x)*mult;
-        double vert = applyDeadband(gamepad1.left_stick_y)*mult;
-        double rot = applyDeadband(-gamepad1.right_stick_x)*(mult*0.8);
-        if (fieldCentricMode&&pinpointReady) drive.fieldCentric(lat, vert, rot, headingRad);
+        double rot = applyDeadband(-gamepad1.right_stick_x)*(mult*0.85);
+        if (fieldCentricMode && pinpointReady) drive.fieldCentric(lat, vert, rot, headingRad);
         else drive.robotCentric(lat, vert, rot);
     }
     private double applyDeadband(double x) {return Math.abs(x)>0.05?x:0.0;}

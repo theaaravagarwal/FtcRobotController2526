@@ -23,7 +23,7 @@ public class TestDirectionTeleOp extends OpMode {
         flywheel = hardwareMap.get(DcMotorEx.class, "flywheel");
         indexerLeft = hardwareMap.get(DcMotorEx.class, "indexerLeft");
         indexerRight = hardwareMap.get(DcMotorEx.class, "indexerRight");
-        feeder = hardwareMap.get(Servo.class, "feeder");
+        // feeder = hardwareMap.get(Servo.class, "feeder");
 
         telemetry.addLine("--- TEST MODE READY ---");
         telemetry.addLine("Hold Cross (A) -> Flywheel");
@@ -57,15 +57,6 @@ public class TestDirectionTeleOp extends OpMode {
             telemetry.addData("Testing", "INDEXER RIGHT");
         } else {
             indexerRight.setPower(0);
-        }
-
-        // 4. Test Feeder Servo (Gamepad 1 Triangle/Y)
-        if (gamepad1.y) {
-            feeder.setPosition(PUSH_POS);
-            telemetry.addData("Testing", "FEEDER SERVO (PUSH)");
-        } else {
-            feeder.setPosition(READY_POS);
-            telemetry.addData("Testing", "FEEDER SERVO (READY)");
         }
 
         telemetry.addLine("\nCheck if balls move UP and AWAY from intake.");

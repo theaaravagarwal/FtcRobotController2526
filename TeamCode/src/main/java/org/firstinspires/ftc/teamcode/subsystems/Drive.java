@@ -34,10 +34,10 @@ public class Drive {
         rightBack = hw.get(DcMotor.class, rightBackName);
 
         // typical mecanum directions
-        leftFront.setDirection(DcMotorSimple.Direction.FORWARD);
-        leftBack.setDirection(DcMotorSimple.Direction.FORWARD);
-        rightFront.setDirection(DcMotorSimple.Direction.REVERSE);
-        rightBack.setDirection(DcMotorSimple.Direction.REVERSE);
+        leftFront.setDirection(DcMotorSimple.Direction.REVERSE);
+        leftBack.setDirection(DcMotorSimple.Direction.REVERSE);
+        rightFront.setDirection(DcMotorSimple.Direction.FORWARD);
+        rightBack.setDirection(DcMotorSimple.Direction.FORWARD);
 
         for (DcMotor m : new DcMotor[]{leftFront, rightFront, leftBack, rightBack}) {
             m.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
